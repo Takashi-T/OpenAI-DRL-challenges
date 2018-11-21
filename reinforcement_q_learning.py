@@ -1,56 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Reinforcement Learning (DQN) Tutorial
-=====================================
-**Author**: `Adam Paszke <https://github.com/apaszke>`_
 
-
-This tutorial shows how to use PyTorch to train a Deep Q Learning (DQN) agent
-on the CartPole-v0 task from the `OpenAI Gym <https://gym.openai.com/>`__.
-
-**Task**
-
-The agent has to decide between two actions - moving the cart left or
-right - so that the pole attached to it stays upright. You can find an
-official leaderboard with various algorithms and visualizations at the
-`Gym website <https://gym.openai.com/envs/CartPole-v0>`__.
-
-.. figure:: /_static/img/cartpole.gif
-   :alt: cartpole
-
-   cartpole
-
-As the agent observes the current state of the environment and chooses
-an action, the environment *transitions* to a new state, and also
-returns a reward that indicates the consequences of the action. In this
-task, the environment terminates if the pole falls over too far.
-
-The CartPole task is designed so that the inputs to the agent are 4 real
-values representing the environment state (position, velocity, etc.).
-However, neural networks can solve the task purely by looking at the
-scene, so we'll use a patch of the screen centered on the cart as an
-input. Because of this, our results aren't directly comparable to the
-ones from the official leaderboard - our task is much harder.
-Unfortunately this does slow down the training, because we have to
-render all the frames.
-
-Strictly speaking, we will present the state as the difference between
-the current screen patch and the previous one. This will allow the agent
-to take the velocity of the pole into account from one image.
-
-**Packages**
-
-
-First, let's import needed packages. Firstly, we need
-`gym <https://gym.openai.com/docs>`__ for the environment
-(Install using `pip install gym`).
-We'll also use the following from PyTorch:
-
--  neural networks (``torch.nn``)
--  optimization (``torch.optim``)
--  automatic differentiation (``torch.autograd``)
--  utilities for vision tasks (``torchvision`` - `a separate
-   package <https://github.com/pytorch/vision>`__).
 
 """
 
@@ -109,7 +59,7 @@ Transition = namedtuple('Transition',
 
 class ReplayMemory(object):
 
-    def __init__(self, capacity):
+    def __init__(self, capacity=100000):
         self.capacity = capacity
         self.memory = []
         self.position = 0
@@ -205,14 +155,14 @@ class DQN(nn.Module):
 
     def __init__(self):
         super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=5)
+        self.conv1 = nn.Conv2d(3, 8, kernel_size=5)
         self.maxpool2d = nn.MaxPool2d(2, stride=2)
-        self.bn1 = nn.BatchNorm2d(16)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=5)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=3)
-        self.bn3 = nn.BatchNorm2d(32)
-        self.head = nn.Linear(448, 2)
+        self.bn1 = nn.BatchNorm2d(8)
+        self.conv2 = nn.Conv2d(8, 8, kernel_size=5)
+        self.bn2 = nn.BatchNorm2d(8)
+        self.conv3 = nn.Conv2d(8, 4, kernel_size=3)
+        self.bn3 = nn.BatchNorm2d(4)
+        self.head = nn.Linear(56, 2)
 
     def forward(self, x):
         # print("Size 1", x.size())
@@ -308,16 +258,16 @@ BATCH_SIZE = 64
 GAMMA = 0.999
 EPS_START = 0.9
 EPS_END = 0.01
-EPS_DECAY = 200
-TARGET_UPDATE = 40
+EPS_DECAY = 600
+TARGET_UPDATE = 10
 
 policy_net = DQN().to(device)
 target_net = DQN().to(device)
 target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
 
-optimizer = optim.RMSprop(policy_net.parameters())
-memory = ReplayMemory(10000)
+optimizer = optim.Adam(policy_net.parameters())
+memory = ReplayMemory()
 
 
 steps_done = 0
@@ -456,7 +406,7 @@ for i_episode in range(num_episodes):
         state = next_state
 
         # Perform one step of the optimization (on the target network)
-        optimize_model()
+        # optimize_model()
         optimize_model()
         if done:
             episode_durations.append(t + 1)
